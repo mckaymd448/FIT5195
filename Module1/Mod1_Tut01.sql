@@ -1,3 +1,5 @@
+--/ a)	Create table SUBJECT2 and insert the above 5 records.
+
 CREATE TABLE subject2 (
     ucode    VARCHAR2(5),
     utitle   VARCHAR2(30),
@@ -42,6 +44,8 @@ SELECT
 FROM
     subject2;
 
+--/ b)	Table STUDENT2 has been created in the dtaniar account. Several records have been inserted to this table. You can now import table STUDENT2 to your account using the following SQL statement:
+
 CREATE TABLE student2
     AS
         SELECT
@@ -49,12 +53,18 @@ CREATE TABLE student2
         FROM
             dtaniar.student2;
 
+--/ c)	Describe the structure of table STUDENT2.
+
 DESCRIBE student2;
+
+--/ d)	Display all records from table STUDENT2.
 
 SELECT
     *
 FROM
     student2;
+
+--/ e)	Insert the missing records to table STUDENT2.
 
 INSERT INTO student2 VALUES (
     '10008',
@@ -85,6 +95,8 @@ INSERT INTO student2 VALUES (
 
 COMMIT;
 
+--/ f)	Import Tables OFFERING2 and ENROLLMENT2 from dtaniar account. The method is similar to question (b) above.
+
 CREATE TABLE offering2
     AS
         SELECT
@@ -98,6 +110,8 @@ CREATE TABLE enrollment2
             *
         FROM
             dtaniar.enrollment2;
+--/ g)	Using SQL to answer the questions:
+--/ 1)	How many students enrolled in the Database unit offered in Main campus?
 
 SELECT
     sb.utitle,
@@ -112,6 +126,8 @@ WHERE
     AND upper(o.ocampus) = 'MAIN'
 GROUP BY
     sb.utitle;
+    
+--/ 2)	What is the total score of students taking the Database unit in Main campus?    
 
 SELECT
     sb.utitle,
@@ -126,6 +142,8 @@ WHERE
     AND upper(o.ocampus) = 'MAIN'
 GROUP BY
     sb.utitle;
+
+--/ 3)	How many students enrolled in the Java unit offered in Semester 2, 2009?
 
 SELECT
     sb.utitle,
@@ -142,6 +160,8 @@ WHERE
 GROUP BY
     sb.utitle;
 
+--/ 4)	What is the total score of students taking the Java unit in Semester 2, 2009?
+
 SELECT
     sb.utitle,
     SUM(e.score) AS "Total Score"
@@ -156,10 +176,11 @@ WHERE
     AND o.oyear = 2009
 GROUP BY
     sb.utitle;
+    
+--/ 5)	How many students received HD in the SAP unit offered in Semester 1, 2009?    
 
 SELECT
-    sb.utitle,
-    COUNT(s.sid) AS "Number of Students"
+    COUNT(*) AS "Number of Students"
 FROM
          student2 s
     JOIN enrollment2  e ON s.sid = e.sid
@@ -169,6 +190,6 @@ WHERE
         upper(sb.utitle) = 'SAP'
     AND o.osem = 1
     AND o.oyear = 2009
-    AND upper(e.grade) = 'HD'
-GROUP BY
-    sb.utitle;
+    AND upper(e.grade) = 'HD';
+    
+    
