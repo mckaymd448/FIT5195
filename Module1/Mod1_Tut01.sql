@@ -226,8 +226,80 @@ CREATE TABLE timedim
         SELECT DISTINCT
             oyear
             || '-'
-            || osem as sem_id,
+            || osem AS sem_id,
             oyear,
-            osem 
+            osem
         FROM
             offering2;
+            
+--/j)	Use the SQL command to create the fact table.
+CREATE TABLE studentsfact
+    AS
+        SELECT
+            o.ocampus           AS campus,
+            sb.ucode            AS ucode,
+            e.grade             AS grade,
+            o.oyear
+            || '-'
+            || o.osem           AS sem_id,
+            COUNT(st.sid)       AS studenttotal,
+            SUM(e.score)        AS scoretotal
+        FROM
+                 student2 st
+            JOIN enrollment2  e ON e.sid = st.sid
+            JOIN offering2    o ON o.oid = e.oid
+            JOIN subject2     sb ON sb.ucode = o.ucode
+        GROUP BY
+            o.ocampus,
+            sb.ucode,
+            e.grade,
+            o.oyear
+            || '-'
+            || o.osem;
+            
+--/ k)	Use the star schema that you have created, display the average score of each unit offered in 2009.
+
+SELECT
+    sd.ucode,
+    sd.utitle,
+    SUM(sf.scoretotal) / SUM(sf.studenttotal) AS "Average Score"
+FROM
+         studentsfact sf
+    JOIN timedim     td ON sf.sem_id = td.sem_id
+    JOIN subjectdim  sd ON sd.ucode = sf.ucode
+WHERE
+    td.oyear = '2009'
+GROUP BY
+    sd.ucode,
+    sd.utitle;
+
+--/ l)	Use the star schema that you have created, display the average score of each unit offered in main campus.
+
+SELECT
+    sd.ucode,
+    sd.utitle,
+    SUM(sf.scoretotal) / SUM(sf.studenttotal) AS "Average Score"
+FROM
+         studentsfact sf
+    JOIN subjectdim sd ON sd.ucode = sf.ucode
+WHERE
+    sf.campus = 'Main'
+GROUP BY
+    sd.ucode,
+    sd.utitle;
+
+--/ m)	Use the star schema that you have created, display the average score of Database unit with the grade N.
+
+SELECT
+    sd.ucode,
+    sd.utitle,
+    SUM(sf.scoretotal) / SUM(sf.studenttotal) AS "Average Score"
+FROM
+         studentsfact sf
+    JOIN subjectdim sd ON sd.ucode = sf.ucode
+WHERE
+        sd.utitle = 'Database'
+    and sf.grade = 'N'
+GROUP BY
+    sd.ucode,
+    sd.utitle;
