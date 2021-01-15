@@ -192,4 +192,42 @@ WHERE
     AND o.oyear = 2009
     AND upper(e.grade) = 'HD';
     
-    
+--/ i)	Use the SQL command to create and populate the dimension tables.
+
+CREATE TABLE campusdim
+    AS
+        SELECT DISTINCT
+            ocampus
+        FROM
+            offering2
+        ORDER BY
+            ocampus;
+
+CREATE TABLE subjectdim
+    AS
+        SELECT
+            ucode,
+            utitle,
+            ucredit
+        FROM
+            subject2;
+
+CREATE TABLE gradedim
+    AS
+        SELECT DISTINCT
+            grade
+        FROM
+            enrollment2
+        ORDER BY
+            grade;
+
+CREATE TABLE timedim
+    AS
+        SELECT DISTINCT
+            oyear
+            || '-'
+            || osem as sem_id,
+            oyear,
+            osem 
+        FROM
+            offering2;
