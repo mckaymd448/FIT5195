@@ -287,12 +287,281 @@ INSERT INTO destination VALUES (
     'M2'
 );
 
-Commit;
+COMMIT;
 
 --/ a.	Create a dimension table called TruckDim1.
+
+CREATE TABLE truckdim1
+    AS
+        SELECT
+            *
+        FROM
+            truck;
+
 --/ b.	Create a dimension table called TripSeason1. This table will have 4 records (Summer, Autumn, Winter, and Spring).
+
+CREATE TABLE tripseason1 (
+    seasonid      NUMBER(1, 0),
+    seasonperiod  VARCHAR(10)
+);
+
+INSERT INTO tripseason1 VALUES (
+    1,
+    'Summer'
+);
+
+INSERT INTO tripseason1 VALUES (
+    2,
+    'Autumn'
+);
+
+INSERT INTO tripseason1 VALUES (
+    3,
+    'Winter'
+);
+
+INSERT INTO tripseason1 VALUES (
+    4,
+    'Spring'
+);
+
+COMMIT;
+
 --/ c.	Create a dimension table called TripDim1.
+
+CREATE TABLE tripdim1
+    AS
+        SELECT
+            tripid,
+            tripdate AS "date",
+            totalkm
+        FROM
+            trip;
+
 --/ d.	Create a bridge table called BridgeTableDim1.
+
+CREATE TABLE bridgetabledim1
+    AS
+        SELECT
+            tripid,
+            storeid
+        FROM
+            destination;
+            
 --/ e.	Create a dimension table called StoreDim1.
+
+CREATE TABLE storedim1
+    AS
+        SELECT
+            *
+        FROM
+            store;
+
 --/ f.	Create a tempfact (and perform the necessary alter and update), and then create the final fact table (called it TruckFact1).
+
+CREATE TABLE tempstorefact
+    AS
+        SELECT
+            t.tripid,
+            t.tripdate,
+            t.truckid,
+            SUM(t.totalkm * tr.costperkm) AS total_delivery_cost
+        FROM
+                 trip t
+            JOIN truck tr ON t.truckid = tr.truckid
+        GROUP BY
+            t.tripid,
+            t.tripdate,
+            t.truckid;
+
+ALTER TABLE tempstorefact ADD (
+    seasonid NUMBER(1, 0)
+);
+
+SELECT
+    *
+FROM
+    tempstorefact;
+
+UPDATE tempstorefact
+SET
+    seasonid = 1
+WHERE
+        to_char(tripdate, 'MM') >= '12'
+    AND to_char(tripdate, 'MM') <= '02';
+
+UPDATE tempstorefact
+SET
+    seasonid = 2
+WHERE
+    to_char(tripdate, 'MM') >= '03'
+    OR to_char(tripdate, 'MM') <= '05';
+
+UPDATE tempstorefact
+SET
+    seasonid = 3
+WHERE
+        to_char(tripdate, 'MM') >= '06'
+    AND to_char(tripdate, 'MM') <= '08';
+
+UPDATE tempstorefact
+SET
+    seasonid = 4
+WHERE
+        to_char(tripdate, 'MM') >= '09'
+    AND to_char(tripdate, 'MM') <= '11';
+
+COMMIT;
+
+CREATE TABLE storefact
+    AS
+        SELECT
+            tripid,
+            seasonid,
+            truckid,
+            total_delivery_cost
+        FROM
+            tempstorefact;
+
 --/ g.	Display (and observe) the contents of the fact table (TruckFact1).
+
+SELECT
+    *
+FROM
+    storefact;
+
+--/ Part 2
+
+--/ a.	Create a dimension table called TruckDim2.
+
+CREATE TABLE truckdim2
+    AS
+        SELECT
+            *
+        FROM
+            truckdim1;
+
+--/ b.	Create a dimension table called TripSeason2. This table will have 4 records (Summer, Autumn, Winter, and Spring).
+
+CREATE TABLE tripseason2
+    AS
+        SELECT
+            *
+        FROM
+            tripseason1;
+
+--/ c.	Create a dimension table called StoreDim2.
+
+CREATE TABLE storedim2
+    AS
+        SELECT
+            *
+        FROM
+            storedim1;
+            
+--/ d.	Create a bridge table called BridgeTableDim2.
+
+CREATE TABLE bridgetabledim2
+    AS
+        SELECT
+            *
+        FROM
+            bridgetabledim1;
+
+--/ e.	Create a dimension table called TripDim2 (Notes: this dimension is different from TripDim1 in the previous section).
+
+CREATE TABLE trimdim2
+    AS
+        SELECT
+            t.tripid,
+            t.tripdate,
+            t.totalkm,
+            1 / COUNT(d.storeid) AS weight_factor
+        FROM
+                 trip t
+            JOIN destination d ON t.tripid = d.tripid
+        GROUP BY
+            t.tripid,
+            t.tripdate,
+            t.totalkm;
+
+--/ f.	Create a tempfact (and perform the necessary alter and update), and then create the final fact table (called it TruckFact2).
+            
+CREATE TABLE tempstorefact2
+    AS
+        SELECT
+            t.tripid,
+            t.tripdate,
+            t.truckid,
+            SUM(t.totalkm * tr.costperkm) AS total_delivery_cost
+        FROM
+                 trip t
+            JOIN truck tr ON t.truckid = tr.truckid
+        GROUP BY
+            t.tripid,
+            t.tripdate,
+            t.truckid;
+
+ALTER TABLE tempstorefact2 ADD (
+    seasonid NUMBER(1, 0)
+);
+
+SELECT
+    *
+FROM
+    tempstorefact;
+
+UPDATE tempstorefact2
+SET
+    seasonid = 1
+WHERE
+        to_char(tripdate, 'MM') >= '12'
+    AND to_char(tripdate, 'MM') <= '02';
+
+UPDATE tempstorefact2
+SET
+    seasonid = 2
+WHERE
+    to_char(tripdate, 'MM') >= '03'
+    OR to_char(tripdate, 'MM') <= '05';
+
+UPDATE tempstorefact2
+SET
+    seasonid = 3
+WHERE
+        to_char(tripdate, 'MM') >= '06'
+    AND to_char(tripdate, 'MM') <= '08';
+
+UPDATE tempstorefact2
+SET
+    seasonid = 4
+WHERE
+        to_char(tripdate, 'MM') >= '09'
+    AND to_char(tripdate, 'MM') <= '11';
+
+COMMIT;
+
+CREATE TABLE storefact2
+    AS
+        SELECT
+            tripid,
+            seasonid,
+            truckid,
+            total_delivery_cost
+        FROM
+            tempstorefact2;
+            
+--/ h.	What is the total delivery cost for each store?         
+
+SELECT
+    s.storename,
+    SUM(f.total_delivery_cost * t.weight_factor) AS "Total Cost for Store"
+FROM
+         storefact2 f
+    JOIN trimdim2         t ON t.tripid = f.tripid
+    JOIN bridgetabledim2  b ON f.tripid = b.tripid
+    JOIN storedim2        s ON b.storeid = s.storeid
+GROUP BY
+    s.storename
+ORDER BY
+    s.storename;
