@@ -214,17 +214,18 @@ WHERE
         SELECT
             client_id
         FROM
-            client
+            client_cleaned
     );
     
 --/ Membership id 115 does not have an entry in the client table.  Error 5.  Client may not longer be a member.  Will remove from membership table.
+
 DELETE FROM membership WHERE client_id NOT
 in
 
 ( SELECT
     client_id
 FROM
-    client
+    client_cleaned
 );
 
 COMMIT;
