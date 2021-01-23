@@ -6,6 +6,15 @@ FROM
 
 --/ No duplicates found.  A null value has been found for this.  Should be deleted from operation database.  Error 1.
 
+--/ Check to make sure manager assignment for branch matches the trainer table.  All matches.
+
+SELECT
+    *
+FROM
+         mfit.branch b
+    JOIN mfit.trainer t ON b.manager_id = t.emp_id
+                           AND b.branch_id = t.branch_id;
+
 --/ Checking class for errors.
 
 SELECT
@@ -19,16 +28,22 @@ ORDER BY
     b.client_id;
 
 SELECT
-    b.session_id,
-    b.client_id,
-    COUNT(b.calories_burned) AS "num entries"
+    c.session_id
+    || '-'
+    || c.client_id       AS pk,
+    COUNT(c.session_id
+          || '-'
+          || c.client_id)      AS pk_count
 FROM
-    mfit.class b
+    mfit.class c
 GROUP BY
-    b.session_id,
-    b.client_id
+    c.session_id
+    || '-'
+    || c.client_id
 HAVING
-    COUNT(b.calories_burned) > 1;
+    COUNT(c.session_id
+          || '-'
+          || c.client_id) > 1;
 
 --/ session id and client id are primary key, so no duplicates can exist in table.  No null values for calories burnt.
 
@@ -80,20 +95,28 @@ FROM
     
 --/ membership 114 and 116 have end dates before the start dates.  Error 4.
 
+--/ check to see if all memberships have an entry in the client table.
+
 SELECT
     *
 FROM
-    mfit.client        c
-    LEFT JOIN mfit.membership    m ON c.client_id = m.client_id;
+    mfit.membership m
+WHERE
+    m.client_id NOT IN (
+        SELECT
+            client_id
+        FROM
+            mfit.client
+    );
     
---/ all clients have an entry in membership table.
+--/ membership id 115 does not have an entry in the client table.  Error 5.
 
 SELECT
     *
 FROM
     mfit.trainer;
     
---// one trainer has a negative salary.  Error 4.
+--// one trainer has a negative salary.  Error 6.
 
 SELECT DISTINCT
     branch_id
@@ -136,4 +159,4 @@ FROM
     mfit.workout_session s
 Where s.work_date > current_date;
 
---// incorrect date for session 201.  has happened in the future.  Error 5.
+--// incorrect date for session 201.  has happened in the future.  Error 7.
