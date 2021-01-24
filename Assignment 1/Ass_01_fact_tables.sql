@@ -52,3 +52,33 @@ FROM
 GROUP BY
     t.emp_salary,
     to_char(t.emp_hired_date, 'yyyymm');
+    
+--/ create the workout fact table, workoutFact, with client information
+
+Drop 
+CREATE TABLE workoutclientfact
+    AS
+        SELECT
+            to_char(ws.work_date, 'yyyymm')        AS "work_date_id",
+            ws.training_goal,
+            c.client_id,
+            COUNT(ws.session_id)                   AS "workout_total"
+        FROM
+                 mfit.workout_session ws
+            JOIN mfit.class c ON ws.session_id = c.session_id
+        GROUP BY
+            to_char(ws.work_date, 'yyyymm'),
+            ws.training_goal,
+            c.client_id;
+
+SELECT
+    wf.client_id,
+    wf.training_goal,
+    SUM(wf."workout_total") AS workouts
+FROM
+    workoutclientfact wf
+WHERE
+    wf.training_goal = 'Weight Loss'
+GROUP BY
+    client_id,
+    training_goal;
