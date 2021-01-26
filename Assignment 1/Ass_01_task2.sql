@@ -92,7 +92,12 @@ CREATE TABLE salarydim (
     sal_upper     NUMBER(6, 0)
 );
 
-INSERT INTO salarydim VALUES (1,'Low',0,74999);
+INSERT INTO salarydim VALUES (
+    1,
+    'Low',
+    0,
+    74999
+);
 
 INSERT INTO salarydim VALUES (
     2,
@@ -109,3 +114,99 @@ INSERT INTO salarydim VALUES (
 );
 
 COMMIT;
+
+--/ Create the fact table, clientFact.
+
+DROP TABLE clientfact CASCADE CONSTRAINTS;
+
+CREATE TABLE clientfact
+    AS
+        SELECT
+            m.member_type
+            || '-'
+            || to_char(m.member_start_date, 'yyyymm')
+            || '-'
+            || to_char(m.member_end_date, 'yyyymm')         AS member_id,
+            c.client_suburb                                 AS suburb_id,
+            COUNT(c.client_id)                              AS client_total,
+            SUM(m.monthly_fee)                              AS membership_fee_total
+        FROM
+                 client_cleaned c
+            JOIN membership m ON m.client_id = c.client_id
+        GROUP BY
+            m.member_type
+            || '-'
+            || to_char(m.member_start_date, 'yyyymm')
+            || '-'
+            || to_char(m.member_end_date, 'yyyymm'),
+            c.client_suburb;
+    
+--/ Create the fact table, workoutFact.
+
+DROP TABLE workoutfact CASCADE CONSTRAINTS;
+
+CREATE TABLE workoutfact
+    AS
+        SELECT
+            to_char(ws.work_date, 'yyyymm')        AS work_date_id,
+            ws.training_goal,
+            COUNT(ws.session_id)                   AS workout_total
+        FROM
+            mfit.workout_session ws
+        GROUP BY
+            to_char(ws.work_date, 'yyyymm'),
+            ws.training_goal;
+            
+--/ create the temp trainer information table, tempTrainerFact.
+DROP TABLE temptrainerfact CASCADE CONSTRAINTS;
+
+CREATE TABLE temptrainerfact
+    AS
+        SELECT
+            t.emp_salary,
+            to_char(t.emp_hired_date, 'yyyymm')        AS hire_date_id,
+            COUNT(t.emp_id)                            AS trainer_total
+        FROM
+            mfit.trainer t
+        GROUP BY
+            t.emp_salary,
+            to_char(t.emp_hired_date, 'yyyymm');
+
+ALTER TABLE temptrainerfact ADD (
+    sal_range_id NUMBER(1, 0)
+);
+
+UPDATE temptrainerfact
+SET
+    sal_range_id = 1
+WHERE
+    emp_salary < 75000;
+
+UPDATE temptrainerfact
+SET
+    sal_range_id = 2
+WHERE
+        emp_salary >= 75000
+    AND emp_salary <= 100000;
+
+UPDATE temptrainerfact
+SET
+    sal_range_id = 3
+WHERE
+    emp_salary > 100000;
+
+COMMIT;
+
+--/ create the trainer information table, trainerFact from tempTrainerFact.
+DROP TABLE trainerfact CASCADE CONSTRAINTS;
+
+CREATE TABLE trainerfact
+    AS
+        SELECT
+            t.sal_range_id,
+            t.hire_date_id,
+            t.trainer_total
+        FROM
+            temptrainerfact t
+        ORDER BY
+            t.hire_date_id;
