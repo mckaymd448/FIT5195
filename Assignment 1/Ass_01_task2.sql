@@ -210,3 +210,94 @@ CREATE TABLE trainerfact
             temptrainerfact t
         ORDER BY
             t.hire_date_id;
+            
+--/ How many workout sessions were offered in November 2019?
+
+SELECT
+    SUM(wf.workout_total) AS "Total Workouts"
+FROM
+         workoutfact wf
+    JOIN datedim dd ON wf.work_date_id = dd.date_id
+WHERE
+        dd.month = 11
+    AND dd.year = 2019;
+
+--/ How much is the total membership fee for Gold membership in October 2018?
+
+SELECT
+    SUM(cf.membership_fee_total) AS "Total Membership fee"
+FROM
+         clientfact cf
+    JOIN memberdim md ON cf.member_id = md.member_id
+WHERE
+        upper(md.member_type) = 'GOLD'
+    AND md.member_start_month <= 08
+    AND md.member_start_year <= 2018
+    AND md.member_end_month >= 08
+    AND md.member_end_year >= 2018;
+
+--/ How many Bronze clients live in Clayton?
+
+SELECT
+    nvl(COUNT(cf.client_total), 0) AS "Number of clients"
+FROM
+         clientfact cf
+    JOIN memberdim     md ON cf.member_id = md.member_id
+    JOIN clientsubdim  sd ON cf.suburb_id = sd.suburb_id
+WHERE
+        upper(md.member_type) = 'BRONZE'
+    AND upper(sd.suburb_id) = 'CLAYTON';
+    
+--/ How many trainers are paid on a high salary scale in 2018?
+
+SELECT
+    SUM(tf.trainer_total) AS "Number of trainers"
+FROM
+         trainerfact tf
+    JOIN salarydim  sd ON tf.sal_range_id = sd.sal_range_id
+    JOIN datedim    dd ON tf.hire_date_id = dd.date_id
+WHERE
+        dd.year <= 2018
+    AND upper(sd.sal_desc) = 'HIGH';
+
+--/ What was the most popular training goal in December?
+
+SELECT
+    gd.training_goal,
+    SUM(wf.workout_total) AS "Number of workouts"
+FROM
+         workoutfact wf
+    JOIN goaldim  gd ON gd.training_goal = wf.training_goal
+    JOIN datedim  dd ON dd.date_id = wf.work_date_id
+WHERE
+    dd.month = 12
+GROUP BY
+    gd.training_goal
+ORDER BY
+    SUM(wf.workout_total) DESC
+FETCH FIRST 1 ROWS ONLY;
+
+--/ Which suburb has the most number of clients?
+
+SELECT
+    cd.suburb_id,
+    SUM(cf.client_total) AS "Total Number"
+FROM
+         clientfact cf
+    JOIN clientsubdim cd ON cd.suburb_id = cf.suburb_id
+GROUP BY
+    cd.suburb_id
+ORDER BY
+    SUM(cf.client_total) DESC
+FETCH FIRST 1 ROWS ONLY;
+
+--/ How many trainers were hired in June 2018?
+
+SELECT
+    Sum(trainer_total) as "Number hired"
+FROM
+         trainerfact tf
+    JOIN datedim dd ON tf.hire_date_id = dd.date_id
+WHERE
+        dd.month = 06
+    AND dd.year = 2018;
