@@ -1,3 +1,7 @@
+--/ Michael McKay
+--/ Student No: 32270208
+--/ Submitted: 01-Feb-2021
+
 --/ Create dimension table clientSubDim.
 
 DROP TABLE clientsubdim CASCADE CONSTRAINTS;
@@ -164,13 +168,10 @@ CREATE TABLE temptrainerfact
     AS
         SELECT
             t.emp_salary,
-            to_char(t.emp_hired_date, 'yyyymm')        AS hire_date_id,
-            COUNT(t.emp_id)                            AS trainer_total
+            to_char(t.emp_hired_date, 'yyyymm') AS hire_date_id,
+            t.emp_id
         FROM
-            mfit.trainer t
-        GROUP BY
-            t.emp_salary,
-            to_char(t.emp_hired_date, 'yyyymm');
+            mfit.trainer t;
 
 ALTER TABLE temptrainerfact ADD (
     sal_range_id NUMBER(1, 0)
@@ -205,9 +206,12 @@ CREATE TABLE trainerfact
         SELECT
             t.sal_range_id,
             t.hire_date_id,
-            t.trainer_total
+            COUNT(t.emp_id) AS trainer_total
         FROM
             temptrainerfact t
+        GROUP BY
+            t.sal_range_id,
+            t.hire_date_id
         ORDER BY
             t.hire_date_id;
             
@@ -294,7 +298,7 @@ FETCH FIRST 1 ROWS ONLY;
 --/ How many trainers were hired in June 2018?
 
 SELECT
-    Sum(trainer_total) as "Number hired"
+    SUM(trainer_total) AS "Number hired"
 FROM
          trainerfact tf
     JOIN datedim dd ON tf.hire_date_id = dd.date_id
