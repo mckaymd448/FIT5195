@@ -1,3 +1,7 @@
+--/ Michael McKay
+--/ Student No: 32270208
+--/ Submitted: 01-Feb-2021
+
 --/ Copy required tables from the MFit folder.
 
 DROP TABLE branch CASCADE CONSTRAINTS;
@@ -198,7 +202,7 @@ SELECT
     m.membership_id,
     ( m.member_end_date - m.member_start_date ) AS date_difference
 FROM
-    membership m;
+    membership m
 WHERE
     ( m.member_end_date - m.member_start_date ) < 0;
      
@@ -256,3 +260,14 @@ UPDATE workout_session
 SET
     work_date = TO_DATE('30-03-2020', 'dd-mm-yyyy')
 Where session_id = 201;
+
+--// check to see if issue has been fixed.
+SELECT
+    s.session_id,
+    s.training_goal,
+    to_char(s.work_date, 'dd-mm-yyyy') AS "Date"
+FROM
+    workout_session s
+WHERE
+    s.work_date > current_date;
+
