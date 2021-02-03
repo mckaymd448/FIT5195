@@ -52,8 +52,41 @@ ORDER BY
 --/ Training salary and date query.
 
 SELECT
-    *
+    dd.year,
+    sd.sal_range_id,
+    sd.sal_desc,
+    SUM(tf.trainer_total)       AS total_trainers,
+    to_char(PERCENT_RANK()
+            OVER(
+        ORDER BY SUM(tf.trainer_total)
+            ), '9.999')                 AS percent_rank
 FROM
-    trainerfact tf
-    Join dateDim dd on dd.date_id = tf.hire_date_id
-    Join salaryDim sd on tf.sal_range_id = sd.sal_range_id;
+         trainerfact tf
+    JOIN datedim    dd ON dd.date_id = tf.hire_date_id
+    JOIN salarydim  sd ON tf.sal_range_id = sd.sal_range_id
+GROUP BY
+    dd.year,
+    sd.sal_range_id,
+    sd.sal_desc
+ORDER BY
+    dd.year,
+    sd.sal_range_id;
+    
+    
+--/ 
+SELECT
+    dd.month,
+    cd.suburb_id,
+    md.member_type,
+    SUM(cf.membership_fee_total) AS "total_membership_fee"
+FROM
+         clientfact cf
+    JOIN memberdim     md ON cf.member_id = md.member_id
+    JOIN clientsubdim  cd ON cf.suburb_id = cd.suburb_id
+    JOIN datedim       dd ON dd.date_id BETWEEN md.member_start_year || md.member_start_month AND md.member_end_year || md.member_end_month
+GROUP BY
+    CUBE(dd.month,
+         cd.suburb_id,
+         md.member_type)
+ORDER BY
+    dd.month;
