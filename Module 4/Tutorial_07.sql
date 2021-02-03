@@ -41,12 +41,14 @@ ORDER BY
 
 SELECT
     cf.emp_num,
+    dw.pilot,
     SUM(cf.revenue) AS "Total Revenue"
 FROM
          dw.charter_fact cf
     JOIN dw.pilot pd ON pd.emp_num = cf.emp_num
 GROUP BY
-    cf.emp_num
+    cf.emp_num,
+    dw.pilot
 ORDER BY
     cf.emp_num;
 
@@ -77,6 +79,8 @@ ORDER BY
 
 SELECT
     td.time_month,
+    pd.emp_num,
+    md.mod_code,
     SUM(cf.tot_fuel) AS "Total Fuel Used"
 FROM
          dw.charter_fact cf
@@ -89,6 +93,157 @@ WHERE
     AND td.time_year = 1995
     AND td.time_month BETWEEN 10 AND 12
 GROUP BY
-    td.time_month
+    td.time_month,
+    pd.emp_num,
+    md.mod_code
+ORDER BY
+    td.time_month;
+    
+--/ Using cube, what is the total fuel used from Oct to Dec 1995 by commercial pilots and airplane model C-90A. Sort the results by the month. How many rows of records do you get?
+
+SELECT
+    td.time_month,
+    pd.emp_num,
+    md.mod_code,
+    SUM(cf.tot_fuel) AS "Total Fuel Used"
+FROM
+         dw.charter_fact cf
+    JOIN dw.pilot    pd ON pd.emp_num = cf.emp_num
+    JOIN dw.model    md ON md.mod_code = cf.mod_code
+    JOIN dw.time     td ON td.time_id = cf.time_id
+WHERE
+        upper(pd.pil_license) = 'COM'
+    AND md.mod_code = 'C-90A'
+    AND td.time_year = 1995
+    AND td.time_month BETWEEN 10 AND 12
+GROUP BY
+    CUBE(td.time_month,
+         pd.emp_num,
+         md.mod_code)
+ORDER BY
+    td.time_month;
+    
+--/ Redo question C.2 using Grouping. Notes that “1” and “0” in the TIME, PILOT, and MODEL indicate that they are aggregate values and real values respectively.
+
+SELECT
+    td.time_month,
+    pd.emp_num,
+    md.mod_code,
+    SUM(cf.tot_fuel)              AS "Total Fuel Used",
+    GROUPING(td.time_month)       AS mo,
+    GROUPING(pd.emp_num)          AS emp,
+    GROUPING(md.mod_code)         AS mod
+FROM
+         dw.charter_fact cf
+    JOIN dw.pilot    pd ON pd.emp_num = cf.emp_num
+    JOIN dw.model    md ON md.mod_code = cf.mod_code
+    JOIN dw.time     td ON td.time_id = cf.time_id
+WHERE
+        upper(pd.pil_license) = 'COM'
+    AND md.mod_code = 'C-90A'
+    AND td.time_year = 1995
+    AND td.time_month BETWEEN 10 AND 12
+GROUP BY
+    CUBE(td.time_month,
+         pd.emp_num,
+         md.mod_code)
+ORDER BY
+    td.time_month;
+    
+--/ As like question C.3 above, but instead of using “0” and “1”, it displays “All Periods”, “All Pilots” and “All Models” instead. (Hints: Use DECODE).
+
+SELECT
+    decode(GROUPING(td.time_month), 1, 'All Months', td.time_month)               AS month,
+    decode(GROUPING(pd.emp_num), 1, 'All Pilots', pd.emp_num)                     AS pilot,
+    decode(GROUPING(md.mod_code), 1, 'All Models', md.mod_code)                   AS model,
+    SUM(cf.tot_fuel)                                                              AS "Total Fuel Used"
+FROM
+         dw.charter_fact cf
+    JOIN dw.pilot    pd ON pd.emp_num = cf.emp_num
+    JOIN dw.model    md ON md.mod_code = cf.mod_code
+    JOIN dw.time     td ON td.time_id = cf.time_id
+WHERE
+        upper(pd.pil_license) = 'COM'
+    AND md.mod_code = 'C-90A'
+    AND td.time_year = 1995
+    AND td.time_month BETWEEN 10 AND 12
+GROUP BY
+    CUBE(td.time_month,
+         pd.emp_num,
+         md.mod_code)
+ORDER BY
+    td.time_month;
+    
+--/ Following the results in question C.4, since there is only one aircraft model in the query results (e.g. C-90A), it seems that the “All Models” are redundant. 
+--/ Now, we want to remove them from the report, as there is no point displaying “All Models” when there is only one model (Hints: Use Partial CUBE).
+
+SELECT
+    decode(GROUPING(td.time_month), 1, 'All Months', td.time_month)               AS month,
+    decode(GROUPING(pd.emp_num), 1, 'All Pilots', pd.emp_num)                     AS pilot,
+    decode(GROUPING(md.mod_code), 1, 'All Models', md.mod_code)                   AS model,
+    SUM(cf.tot_fuel)                                                              AS "Total Fuel Used"
+FROM
+         dw.charter_fact cf
+    JOIN dw.pilot    pd ON pd.emp_num = cf.emp_num
+    JOIN dw.model    md ON md.mod_code = cf.mod_code
+    JOIN dw.time     td ON td.time_id = cf.time_id
+WHERE
+        upper(pd.pil_license) = 'COM'
+    AND md.mod_code = 'C-90A'
+    AND td.time_year = 1995
+    AND td.time_month BETWEEN 10 AND 12
+GROUP BY
+    md.mod_code,
+    CUBE(td.time_month,
+         pd.emp_num)
+ORDER BY
+    td.time_month;
+    
+--/ Using rollup with decode, what is the total fuel used from Oct to Dec 1995 by commercial pilots and airplane model C-90A. 
+--/ Sort the results by the month. How many rows of records do you get?
+
+SELECT
+    decode(GROUPING(td.time_month), 1, 'All Months', td.time_month)               AS month,
+    decode(GROUPING(pd.emp_num), 1, 'All Pilots', pd.emp_num)                     AS pilot,
+    decode(GROUPING(md.mod_code), 1, 'All Models', md.mod_code)                   AS model,
+    SUM(cf.tot_fuel)                                                              AS "Total Fuel Used"
+FROM
+         dw.charter_fact cf
+    JOIN dw.pilot    pd ON pd.emp_num = cf.emp_num
+    JOIN dw.model    md ON md.mod_code = cf.mod_code
+    JOIN dw.time     td ON td.time_id = cf.time_id
+WHERE
+        upper(pd.pil_license) = 'COM'
+    AND md.mod_code = 'C-90A'
+    AND td.time_year = 1995
+    AND td.time_month BETWEEN 10 AND 12
+GROUP BY
+    ROLLUP(td.time_month,
+           pd.emp_num,
+           md.mod_code)
+ORDER BY
+    td.time_month;
+    
+--/ Modify C.6 to use Partial Roll up (exclude “All Models” from the rollup).
+
+SELECT
+    decode(GROUPING(td.time_month), 1, 'All Months', td.time_month)               AS month,
+    decode(GROUPING(pd.emp_num), 1, 'All Pilots', pd.emp_num)                     AS pilot,
+    decode(GROUPING(md.mod_code), 1, 'All Models', md.mod_code)                   AS model,
+    SUM(cf.tot_fuel)                                                              AS "Total Fuel Used"
+FROM
+         dw.charter_fact cf
+    JOIN dw.pilot    pd ON pd.emp_num = cf.emp_num
+    JOIN dw.model    md ON md.mod_code = cf.mod_code
+    JOIN dw.time     td ON td.time_id = cf.time_id
+WHERE
+        upper(pd.pil_license) = 'COM'
+    AND md.mod_code = 'C-90A'
+    AND td.time_year = 1995
+    AND td.time_month BETWEEN 10 AND 12
+GROUP BY
+    ROLLUP(td.time_month,
+           pd.emp_num),
+           md.mod_code
 ORDER BY
     td.time_month;
