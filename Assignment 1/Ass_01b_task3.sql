@@ -151,15 +151,14 @@ ORDER BY
 
 SELECT
     dd.year,
-    dd.month,
     gd.training_goal,
-    SUM(wf.workout_total) AS total_workouts
-    Sum(Sum(wf.workout total) over (partion BY dd.year
-    ORDER BY
-        dd.year,
-        dd.month
-    ROWS UNBOUNDED PRECEDING
-)                                AS cumulative_total
+    SUM(wf.workout_total)       AS total_workouts,
+    SUM(SUM(wf.workout_total))
+    OVER(
+        ORDER BY
+            dd.year
+        ROWS UNBOUNDED PRECEDING
+    )                           AS cumulative_total
 FROM
          workoutfact wf
     JOIN goaldim  gd ON wf.training_goal = gd.training_goal
@@ -168,7 +167,92 @@ WHERE
     gd.training_goal = 'Injury Rehabilitation'
 GROUP BY
     dd.year,
-    dd.month,
     gd.training_goal
-ORDER BY dd.year,
-         dd.month;
+ORDER BY
+    dd.year;
+    
+--/ Report 8.  Average new members signing up per month.
+
+SELECT
+    md.member_start_year,
+    md.member_start_month,
+    SUM(cf.client_total)        AS new_clients,
+    to_char(AVG(SUM(cf.client_total))
+            OVER(
+        ORDER BY
+            md.member_start_year, md.member_start_month
+        ROWS 2 PRECEDING
+            ),
+            '999,999,999.99')   AS ave_new_clients
+FROM
+         clientfact cf
+    JOIN memberdim md ON md.member_id = cf.member_id
+GROUP BY
+    md.member_start_year,
+    md.member_start_month
+ORDER BY
+    md.member_start_year,
+    md.member_start_month;
+    
+--/ Report 9.  Top 5 busiest months for each training goal.
+
+SELECT
+    *
+FROM
+    (
+        SELECT
+            dd.year,
+            dd.month,
+            gd.training_goal,
+            SUM(wf.workout_total)       AS total_workouts,
+            RANK()
+            OVER(PARTITION BY gd.training_goal
+                 ORDER BY SUM(wf.workout_total) DESC
+            )                           AS rank
+        FROM
+                 workoutfact wf
+            JOIN goaldim  gd ON wf.training_goal = gd.training_goal
+            JOIN datedim  dd ON wf.work_date_id = dd.date_id
+        GROUP BY
+            dd.year,
+            dd.month,
+            gd.training_goal
+        ORDER BY
+            dd.year,
+            dd.month
+    )
+WHERE
+    rank <= 5
+ORDER BY
+    rank;
+    
+--/ Report 10.  Membership types generating most revenue per month.
+
+SELECT
+    *
+FROM
+    (
+        SELECT
+            RANK()
+            OVER(PARTITION BY md.member_type
+                 ORDER BY SUM(cf.membership_fee_total) DESC
+            )                                  AS rank,
+            dd.year,
+            dd.month,
+            md.member_type,
+            SUM(cf.membership_fee_total)       AS "total_membership_fee"
+        FROM
+                 clientfact cf
+            JOIN memberdim     md ON cf.member_id = md.member_id
+            JOIN clientsubdim  cd ON cf.suburb_id = cd.suburb_id
+            JOIN datedim       dd ON dd.date_id BETWEEN md.member_start_year || md.member_start_month AND md.member_end_year || md.member_end_month
+        GROUP BY
+            dd.year,
+            dd.month,
+            md.member_type
+        ORDER BY
+            dd.year,
+            dd.month
+    )
+ORDER BY
+    rank;
