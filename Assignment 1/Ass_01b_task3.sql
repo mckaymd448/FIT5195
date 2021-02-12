@@ -1,3 +1,7 @@
+--/ Michael McKay
+--/ Student No: 32270208
+--/ Submitted: 12-Feb-2021
+
 --/ Simple reports:
 
 --/ Report 1.  Query to get a ranked list of which months had the most new members, and which postcode they were located in.
@@ -26,54 +30,35 @@ FROM
     )
 WHERE
     month_rank <= 3;
-    
---/ Report 2.  Query to get percentage of workout goal grouped by date.
+     
+--/ Report 2 - Ranking member for length of membership.
 
 SELECT
     dd.year,
-    gd.training_goal,
-    SUM(wf.workout_total)       AS num_workouts,
+    dd.month,
+    md.member_type,
+    SUM(membership_fee_total)     AS total_membership,
     to_char(PERCENT_RANK()
-            OVER(
-        ORDER BY SUM(wf.workout_total)
-            ), '9.999')                 AS percent_rank
+            OVER(PARTITION BY dd.year
+                 ORDER BY SUM(cf.membership_fee_total)
+            ),
+            '9.999')              AS percent_rank
 FROM
-         workoutfact wf
-    JOIN datedim  dd ON wf.work_date_id = dd.date_id
-    JOIN goaldim  gd ON wf.training_goal = gd.training_goal
+         clientfact cf
+    JOIN memberdim  md ON md.member_id = cf.member_id
+    JOIN datedim    dd ON dd.date_id BETWEEN md.member_start_year || md.member_start_month AND md.member_end_year || md.member_end_month
 GROUP BY
     dd.year,
-    gd.training_goal
+    dd.month,
+    md.member_type
 ORDER BY
-    SUM(wf.workout_total) DESC,
     dd.year,
-    gd.training_goal;
-    
---/ Report 2.  Training salary and date query.
+    dd.month,
+    md.member_type;
 
-SELECT
-    dd.year,
-    sd.sal_range_id,
-    sd.sal_desc,
-    SUM(tf.trainer_total)       AS total_trainers,
-    to_char(PERCENT_RANK()
-            OVER(
-        ORDER BY SUM(tf.trainer_total)
-            ), '9.999')                 AS percent_rank
-FROM
-         trainerfact tf
-    JOIN datedim    dd ON dd.date_id = tf.hire_date_id
-    JOIN salarydim  sd ON tf.sal_range_id = sd.sal_range_id
-GROUP BY
-    dd.year,
-    sd.sal_range_id,
-    sd.sal_desc
-ORDER BY
-    dd.year,
-    sd.sal_range_id;
-    
-    
---/ Report 3.  
+--/ Reports with subtotals.     
+--/ Report 3.  Sum of membership fee divided by month, year, suburb and membership type.  Subtotals for all dimension attributes.
+
 SELECT
     decode(GROUPING(dd.month), 1, 'All Months', dd.month)                                AS month,
     decode(GROUPING(cd.suburb_id), 1, 'All Suburbs', cd.suburb_id)                       AS suburb,
@@ -91,7 +76,8 @@ GROUP BY
 ORDER BY
     dd.month;
     
---/ Report 4.  
+--/ Report 4.  Sum of membership fee divided by month, year, suburb and membership type.  Subtotals for suburb_id and member_type.
+
 SELECT
     dd.month,
     decode(GROUPING(cd.suburb_id), 1, 'All Suburbs', cd.suburb_id)                       AS suburb,
@@ -109,7 +95,7 @@ GROUP BY
 ORDER BY
     dd.month;
     
---/ Report 5.
+--/ Report 5.  Total workouts completed, divided by year, month and training goal.  Subtotals for All years, all months, and all goals.
 
 SELECT
     decode(GROUPING(dd.year), 1, 'All years', dd.year)                                 AS year,
@@ -128,7 +114,7 @@ ORDER BY
     dd.year,
     dd.month;
     
---/ Report 6.
+--/ Report 6.  Total workouts completed, divided by year, month and training goal.  Subtotals for all training goals.
 
 SELECT
     dd.year,
@@ -146,8 +132,9 @@ GROUP BY
 ORDER BY
     dd.year,
     dd.month;
-    
---/ Report 7.
+
+--/ Reports with moving and cumulative aggregates    
+--/ Report 7.  Total number of workout sessions and cumulative total number of workout sessions divided by year and training goal.  Only 'injury rehabilitation' shown.
 
 SELECT
     dd.year,
@@ -176,8 +163,8 @@ ORDER BY
 SELECT
     md.member_start_year,
     md.member_start_month,
-    SUM(cf.client_total)        AS new_clients,
-    to_char(AVG(SUM(cf.client_total))
+    NVL(SUM(cf.client_total),0)        AS new_clients,
+    to_char(AVG(NVL(SUM(cf.client_total),0))
             OVER(
         ORDER BY
             md.member_start_year, md.member_start_month
@@ -193,40 +180,9 @@ GROUP BY
 ORDER BY
     md.member_start_year,
     md.member_start_month;
-    
---/ Report 9.  Top 5 busiest months for each training goal.
 
-SELECT
-    *
-FROM
-    (
-        SELECT
-            dd.year,
-            dd.month,
-            gd.training_goal,
-            SUM(wf.workout_total)       AS total_workouts,
-            RANK()
-            OVER(PARTITION BY gd.training_goal
-                 ORDER BY SUM(wf.workout_total) DESC
-            )                           AS rank
-        FROM
-                 workoutfact wf
-            JOIN goaldim  gd ON wf.training_goal = gd.training_goal
-            JOIN datedim  dd ON wf.work_date_id = dd.date_id
-        GROUP BY
-            dd.year,
-            dd.month,
-            gd.training_goal
-        ORDER BY
-            dd.year,
-            dd.month
-    )
-WHERE
-    rank <= 5
-ORDER BY
-    rank;
-    
---/ Report 10.  Membership types generating most revenue per month.
+--/ Reports with Partitions.    
+--/ Report 9.  Total membership fee generated, divided by year, month and member_type.  Rank given partitioned by member_ship type.
 
 SELECT
     *
@@ -254,5 +210,7 @@ FROM
             dd.year,
             dd.month
     )
+WHERE
+    rank <= 5
 ORDER BY
     rank;
