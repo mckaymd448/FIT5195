@@ -54,21 +54,21 @@ CREATE TABLE datedim
             to_char(m.member_start_date, 'yyyy')          AS year,
             to_char(m.member_start_date, 'mm')            AS month
         FROM
-            mfit.membership m
+            membership m
         UNION
         SELECT DISTINCT
             to_char(t.emp_hired_date, 'yyyymm')        AS date_id,
             to_char(t.emp_hired_date, 'yyyy')          AS year,
             to_char(t.emp_hired_date, 'mm')            AS month
         FROM
-            mfit.trainer t
+            trainer t
         UNION
         SELECT DISTINCT
             to_char(w.work_date, 'yyyymm')        AS date_id,
             to_char(w.work_date, 'yyyy')          AS year,
             to_char(w.work_date, 'mm')            AS month
         FROM
-            mfit.workout_session w
+            workout_session w
         ORDER BY
             1;
 
@@ -156,7 +156,7 @@ CREATE TABLE workoutfact
             ws.training_goal,
             COUNT(ws.session_id)                   AS workout_total
         FROM
-            mfit.workout_session ws
+            workout_session ws
         GROUP BY
             to_char(ws.work_date, 'yyyymm'),
             ws.training_goal;
@@ -171,7 +171,7 @@ CREATE TABLE temptrainerfact
             to_char(t.emp_hired_date, 'yyyymm') AS hire_date_id,
             t.emp_id
         FROM
-            mfit.trainer t;
+            trainer t;
 
 ALTER TABLE temptrainerfact ADD (
     sal_range_id NUMBER(1, 0)
